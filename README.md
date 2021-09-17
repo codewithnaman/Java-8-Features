@@ -42,17 +42,17 @@ In One line I can define imperative and declarative programming like below:
 
 ## Major Features of Java 8
 ### Feature 0 - Functional Interfaces
-In Previous versions of Java below 8; To create a concrete implementation we implement interface in classes or create 
-anonymous class and pass it to function or assign to variable. In Java 8 We get Lambada Expression; Where we can define
-or implement an interface without creating anonymous classes and provide implementation in same line where you are 
-declaring variable. 
+In Previous versions of Java below 8; To create a concrete implementation of interface, we implement interface in classes
+or create anonymous class and pass it to function or assign to variable. In Java 8 We get Lambada Expression; Where we 
+can define or implement an interface without creating anonymous classes and provide implementation in same line where 
+you are declaring variable. 
 
 A functional interface is useful to create and assign a lambada expression. To create a functional interface the 
 interface should qualify below properties:
 * It should contain only one abstract method
 * Interface can have default methods
 * Interface can have static methods
-* Optionally we can mark the @FunctionalInterface annotation
+* Optionally we can mark the @FunctionalInterface annotation on Interface
 
 We will talk about default method and static method in upcoming section. 
 
@@ -147,7 +147,7 @@ public class ModernMethod {
     }
 }
 ```
-We ar going to learn method reference in detail in upcoming section.
+We are going to learn method reference in detail in upcoming section.
 
 * One major difference between implementing anonymous class and lambada expression is anonymous class create class files 
 number of times it is defined. Just remember basic from java when we implement any anonymous class it will create 
@@ -160,7 +160,7 @@ In section Feature - 0, We have seen what functional interfaces are, and then we
 In section Feature - 1 Lambada Expression. In This section we will create our own Functional Interface and Use it.
 
 To Understand this we will take an example; In this example we will measure time took by a method for execution. Let's
-create first write in traditional way then we will convert it to functional programming way.
+create first in traditional way then we will convert it to functional programming way.
 
 Let's first create a functional interface which have at most one method.
 ```java
@@ -173,11 +173,11 @@ We have marked above interface with @FunctionalInterface optional annotation for
 makes sure at compile time your interface do not have more than one abstract method.
 
 Now Let's create a class which takes instance of MeasurableMethod Interface; execute operation and then reports 
-execution time.
+execution time. 
 ```java
 public class MeasureTime {
 
-    public void MeasureTime(MeasurableMethod measurableMethod) {
+    public void measureTime(MeasurableMethod measurableMethod) {
         LocalTime startTime = LocalTime.now();
         measurableMethod.performOperation();
         LocalTime endTime = LocalTime.now();
@@ -208,7 +208,7 @@ public class TraditionalWay {
     public static void main(String[] args) {
         WaitForIt waitForIt = new WaitForIt();
         MeasureTime measureTime = new MeasureTime();
-        measureTime.MeasureTime(waitForIt);
+        measureTime.measureTime(waitForIt);
 
         measureTime.MeasureTime(new MeasurableMethod() {
             @Override
@@ -267,7 +267,7 @@ has default method which is andThen, Which takes another consumer as argument an
 chaining of consumers.
 
 **2. Supplier :-** Supplier interface is for provide the value. This interface has only one method in it which is get.
-There is no default method declared interface. It is used for lazy creation of object, and optional's orElseGet or
+There is no default method declared interface. It is used for lazy creation of object, and optional orElseGet or
 elseThrow methods.
 
 **3. Predicate :-** It is for evaluating expression and return response as true or false. It is most for stream filter
