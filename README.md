@@ -363,84 +363,209 @@ function should be implemented or any default behaviour if not implemented.
 Post Java 8, we can define method implementation in interfaces. To define a method implementation we need use keyword 
 default for the method we are providing the implementation.
 
-But why we want to write implementation in Interface; Let's answer this question first. For understand why Let's consider
+But why we want to write implementation in Interface; lets answer this question first. For understand why, consider
 an example where you are writing a library, and you publish it. After passing a good period of time this library is start
 using in multiple projects. This library contains an interface which contains the 4 abstract methods which are 
 implemented by the projects who use it.
 
-Let's consider you are improving your library for which you need to add more method to interface; so client can write 
-their own implementation for this. But projects are already using your library; and it was compiling good and running 
-until you have introduced this interface methods. 
+Let's consider you are improving your library and provide more functionality in it. For which you need to add more 
+methods to interface; so client can write their own implementation for their part on this. But projects are already 
+using your library; and it was compiling good and running. Once they upgrade your library version it stop compiling 
+project because of the new methods defined in the interface that need to be implemented in client projects. For which
+the client projects need to put development efforts, recompile code and redeploy.
 
-And here is chaos is created for all projects which implemented library interface need to implement this
-particular method and recompile it and deploy it. Which solutions come with the default method in interface. To
-provide implementation of a method in an interface, we need to use default keyword for method and can provide the
-implementation. By providing default information you are providing the default behaviour of method; If a client doesn't
-want the default behaviour then he can override and kick in his project specific behaviour. But the default methods
-in interface will gives you flexibility to enhance the library without breaking client applications.
+To remediate this kind of situation default method introduced in Interface, so that client can update library version,
+without having compilation error and can use existing methods in Interface. Also in other words, If a client is not 
+using that particular method there is no impact on client, If they want to use this new introduced method, developers 
+of library provided default behaviour what that function does. But in case if client wants to have their own custom 
+behaviour of that particular method then they can override the default method, and they can provide their own 
+implementation.
 
 Let's understand few things about interface default methods.
 1. Default methods can be overridden in subclasses.
+```java
+interface HelloTest {
+    default void printHello(){
+        System.out.println("Hello");
+    }
+}
+
+public class Point1 implements HelloTest {
+    @Override
+    public void printHello() {
+        System.out.println("Hello From Class");
+    }
+
+    public static void main(String[] args) {
+        Point1 point = new Point1();
+        point.printHello();
+    }
+}
+```
 2. SubTypes automatically carry over the default methods from their supertypes.
+```java
+public class Point2 implements HelloTest {
+
+    public static void main(String[] args) {
+        Point2 point = new Point2();
+        point.printHello();
+    }
+}
+```
 3. For the interface that contribute a default method, the implementation in a subtype takes precedence over the one
    in supertypes.
 4. Implementation in classes, include abstract declaration take precedence over all interface defaults.
+```java
+interface PrintHello{
+    default void print(){
+        System.out.println("Hello");
+    }
+}
+
+class PrintWorld {
+    public void print(){
+        System.out.println("World");
+    }
+}
+
+public class Point3And4 extends PrintWorld implements PrintHello {
+    public static void main(String[] args) {
+        Point3And4 point3And4 = new Point3And4();
+        point3And4.print();
+    }
+}
+```
 5. If there's a conflict between two or more default method implementations, or there's a default abstract conflict
    between two interfaces, the inheriting class should disambiguate. i.e. If two interfaces have same method, and they
    don't have any class hierarchy then we need to resolve this problem in implementing class. Either we need to write our
    own implementation or can call one or both of super implementation in a sequence. In simple words I can say whenever
-   diamond problem comes from interfaces; it should be solved by implementing class. If we have diamond problem we get below
-   error:
+   diamond problem comes from interfaces; it should be solved by implementing class. If we have diamond problem we get 
+   below error for below java code:
+```java
+interface Expandable {
+    default void expand(){
+        System.out.println("Expanding because of Expandable property");
+    }
+}
+interface Gas{
+    default void expand(){
+        System.out.println("Expanding because of Gas State Property");
+    }
+}
+public class Point5 implements Expandable,Gas {
+    public static void main(String[] args) {
+        Point5 point = new Point5();
+        point.expand();
+    }
+}
+```
 ```text
-Error:(3, 8) java: types java8.feature4.FastFly and java8.feature4.Sail are incompatible;
-  class java8.feature4.SeaPlane inherits unrelated defaults for cruise() from types java8.feature4.FastFly and java8.feature4.Sail
-``` 
+java: class com.codewithnaman.java8.feature4.Point5 inherits unrelated defaults for expand() from types com.codewithnaman.java8.feature4.Expandable and com.codewithnaman.java8.feature4.Gas
+```
+To resolve it we need to override the method expand() in the Point5 class. In case if we want to call one of interface 
+method then we need to use the syntax <ClassOrInterfaceName>.super.<MethodName>, Because if we call 
+<ClassOrInterfaceName>.<MethodName> then it may call the static method of class which may present there, 
+so to avoid confusion we use the super reference. Let's fix Point5 class and call Gas interface method.
+```java
+public class Point5 implements Expandable,Gas {
 
-When we want to class interface method we will use <ClassName>.super.<MethodName>, Because if we call
-<ClassName>.<MethodName> then it may call the static method of class which may present there, so to avoid confusion
-we use the super reference.
+    @Override
+    public void expand() {
+        Gas.super.expand();
+    }
+
+    public static void main(String[] args) {
+        Point5 point = new Point5();
+        point.expand();
+    }
+}
+```
 
 #### Interface vs Abstract Classes
 * Abstract class can have state while an interface can't have state.
 * We can inherit one abstract class but can implement any number of interfaces.
 
-## Feature 5 : Final, inner classes and effectively final
-Let's understand code [TraditionalInnerClass](src/main/java/java8/feature5/TraditionalInnerClass.java). In the code
-we are declaring an interface which have one abstract method which take a value and multiply with some value and
-return the result.
+### Feature 5 - Final and effectively final variable
+To understand the effectively final. Let's first take an example of inner class where we will use a variable from the 
+outer scope in inner class. Let's see below class example:
 ```java
- public static void main(String[] args) {
-        Multiplier  multiplier = createMultiplier(4);
+interface Multiplier{
+    int multiplier(int value);
+}
+
+public class NumberMultiplier {
+    public static void main(String[] args) {
+        NumberMultiplier numberMultiplier = new NumberMultiplier();
+        Multiplier multiplier = numberMultiplier.getMultiplier(5);
         System.out.println(multiplier.multiplier(3));
     }
 
-    private static Multiplier createMultiplier(int multiplier) {
-        final int instMultiplier = multiplier;
+    private Multiplier getMultiplier(int multiplyBy) {
         return new Multiplier() {
             @Override
             public int multiplier(int value) {
-                return value * instMultiplier;
+                return value*multiplyBy;
+            }
+        };
+    }
+}
+```
+In above example we have created anonymous inner class of interface in method getMultiplier. In the method we are 
+creating the Multiplier instance and multiply by argument which we took in a function variable stored in stack. Now if 
+I see we used the variable inside inner class, while the stack will be removed after the call. If till Java 7 We compile
+below code then we will get below error:
+```text
+NumberMultiplier.java:17: error: local variable multiplyBy is accessed from within inner class; needs to be declared final
+                return value*multiplyBy;
+```
+To fix the above error till Java 7 We need to write function like below:
+```java
+private Multiplier getMultiplier(final int multiplyBy) {
+        return new Multiplier() {
+            @Override
+            public int multiplier(int value) {
+                return value*multiplyBy;
             }
         };
     }
 ```
+We need to add final access modifier to make it compile and run. Let's understand what happens when we declared the 
+variable as final. When we declared the variable as final, then compiler adds that variable as instance variable to 
+our anonymous class. It also creates a constructor for this variable and initialize it with the value.
 
-Now we have created anonymous inner class of interface in method createMultiplier. In the method we are creating the
-Multiplier instance and multiply by argument multiplier which we took in a function variable stored in stack. Now
-if I see we used the variable inside inner class, while the stack will be removed after the call, also if you don't
-declare the variable as final till Java 7 then code will not compile and give error. So what happens internally after
-declaring variable final, that code will compile. Let's find out th answer.
-
-When we declare the variable as final then compiler adds this variable to anonymous class as instance variable and
-create a consutructor for this variable and initialize it with the value. If we don't declare the value as final
-then chances that value is going to be changed on stack and if will not reflect to instance variable which is created
-by the compiler; which can leads to bug. So, Java made it mandatory if you are using a variable inside the anonymous
-function or lambada expression; it should be final or effectively final.
+Why didn't same thing happen when we did not declare the variable final? The reason for that is if variable is not
+declare the final it's value may get changed on stack, and it will not reflect to instance variable of our anonymous
+class and this may lead to bug. So, Java made it mandatory if we are using a variable inside the anonymous function
+of lambada expression; it should be final or effectively final.
 
 * Effectively final is in Java 8 which says the code will still work if we remove final; but it is understanding
   between compiler and developer that if variable is used in lambada or inner class then the variable will not
   going to modify. If you try to modify it then compiler will complain to you.
 
+So you can write above code without using final keyword, and it will compile and run fine with Java 8.
+```java
+interface Multiplier{
+    int multiplier(int value);
+}
+
+public class NumberMultiplier {
+    public static void main(String[] args) {
+        NumberMultiplier numberMultiplier = new NumberMultiplier();
+        Multiplier multiplier = numberMultiplier.getMultiplier(5);
+        System.out.println(multiplier.multiplier(3));
+    }
+
+    private Multiplier getMultiplier(int multiplyBy) {
+        return value -> value*multiplyBy;
+    }
+}
+```
+
+### Feature 6 - Streams
+In Java 8 we get completely new feature called streams. This is main construct to put the functional programming in Java
+over declarative programming, we have learned both the things in starting of the text. Let's look it from different
+perspective.
+Let's take an example for this in which we have to sort names; We are going to use this example for further text.
 
 ## More on java streams, classes and operations
 ## Sorting example
