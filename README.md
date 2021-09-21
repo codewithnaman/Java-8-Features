@@ -561,47 +561,336 @@ public class NumberMultiplier {
 }
 ```
 
-### Feature 6 - Streams
+### Feature 6 - Optional
+In Java below 8, there were no way to convey the intention of method that can return a value as well as no value. So, 
+instead of returning no value we return null. But it brings another chaos at user of our code, that user need to check
+the null value his side, or he may get NullPointerException at runtime
+
+To avoid above problem, Java 8 have introduced new Data Type which is called Optional<T>, where T shows generics of value
+can be returned from method. Let's understand this by example, Let's first write a code in Java 7, and then we will use
+Java 8 and refactor the code using Optional.
+```java
+public class TraditionalCode {
+
+    public static void main(String[] args) {
+        TraditionalCode instance = new TraditionalCode();
+        Float divisionResult = instance.divide(3,2);
+        System.out.println(divisionResult);
+        System.out.println(divisionResult.compareTo(Float.valueOf(1.5f)));
+        divisionResult = instance.divide(2,0);
+        System.out.println(divisionResult);
+        System.out.println(divisionResult.compareTo(Float.valueOf(1.5f)));
+    }
+
+    private Float divide(int number,int divisor){
+        if(divisor==0)
+            return null;
+        return (float)number/divisor;
+    }
+}
+```
+In above code we are not using functional and wrote code as we write below Java 8. In above program the first division
+works without any error or exception. But on second one we will get NullPointerException; since divisor is 0 and
+function returns null on that. Let's protect our code from the NullPointerException.
+```java
+public class TraditionalCode {
+
+    public static void main(String[] args) {
+        TraditionalCode instance = new TraditionalCode();
+        Float divisionResult = instance.divide(3, 2);
+        System.out.println(divisionResult);
+        System.out.println(divisionResult.compareTo(Float.valueOf(1.5f)));
+        divisionResult = instance.divide(2, 0);
+        System.out.println(divisionResult);
+        if (Objects.nonNull(divisionResult))
+            System.out.println(divisionResult.compareTo(Float.valueOf(1.5f)));
+    }
+}
+```
+This will fix the code but not very intuitive way to express from function side and client can expect null for every 
+method and need to guard against each method. 
+
+Let's write the same code with Java 8 Optional.
+```java
+public class OptionalUsedCode {
+
+    public static void main(String[] args) {
+        OptionalUsedCode instance = new OptionalUsedCode();
+        Consumer<Float> compareResult = e-> System.out.println(e.compareTo(1.5f)==0);
+        Optional<Float> divisionResult = instance.divide(3,2);
+        divisionResult.ifPresent(System.out::println);
+        divisionResult.ifPresent(compareResult);
+        divisionResult = instance.divide(2,0);
+        divisionResult.ifPresent(System.out::println);
+        divisionResult.ifPresent(compareResult);
+        divisionResult = instance.divide(5,2);
+        if(divisionResult.isPresent()){
+            System.out.println(divisionResult.get());
+        }
+    }
+
+    private Optional<Float> divide(int number, int divisor){
+        if(divisor==0)
+            return Optional.empty();
+        return Optional.of((float)number/divisor);
+    }
+}
+```
+In above code we can see that divide method clear its intention that it can return null by declaring the type Optional.
+If we are sure that method will definitely return value then no need to use Optional. But, where we expect that we might
+return value null value we should use Optional. 
+
+To return the value we use factory method of Optional, and then return value using Optional.of(value). If we want to 
+return no value then we will use Optional.empty() as return. 
+
+The Client code then can use Optional.ifPresent(Consumer<T> consumer) method to execute code if value present. If we
+have more lines of code to execute on any condition then use optional.isPresent() method in if block for value checking
+and write code according to that. Calling get method on Optional without checking optional.isPresent() is bad practice.
+
+To create the Optional value we can also use Optional.ofNullable(T value) method, if we pass the value it return the 
+Optional with value otherwise Empty Optional.
+
+### Feature 7 - Streams
 In Java 8 we get completely new feature called streams. This is main construct to put the functional programming in Java
-over declarative programming, we have learned both the things in starting of the text. Let's look it from different
-perspective.
-Let's take an example for this in which we have to sort names; We are going to use this example for further text.
+over declarative programming, we have learned both programming style in starting of the text. Let's look it from 
+different perspective.
 
-## More on java streams, classes and operations
-## Sorting example
-Let's take an example of sorting in Java 7 then we will it to Java 8 and then we understnad the prespective from the
-functional point of view.
+Let's take an example for this in which we have to sort list of persons on different criteria; We are going to use this 
+example for further text.
+```java
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 
-[TraditionalMethod](src/main/java/java8/example/sorting/TraditionalMethod.java) is example in which we are sorting
-using Collections.sort(list, comparator). With the above implementation I can see two problems. One is that
-we are mutating objects and second is that for sorting on age we have lot of ceremony and if want to reverse sort
-we need to change the condition.
+public class PersonsListBuilder {
 
-[ModernMethod1](src/main/java/java8/example/sorting/ModernMethod1.java) use the Java8 Lambada function and steams
-to sort. In which we can see original collection is not modified and reverse is done using calling default method
-of the comparator interface.
+    public static List<Person> getPersonsList(){
+        List<Person> names = new ArrayList<>();
+        names.add(new Person("Annabelle",20));
+        names.add(new Person("Monica",25));
+        names.add(new Person("Rachel",30));
+        names.add(new Person("Barney",38));
+        names.add(new Person("Ted",28));
+        names.add(new Person("Joey",25));
+        names.add(new Person("Chandler",28));
+        names.add(new Person("Ross",30));
+        names.add(new Person("Lily",28));
+        names.add(new Person("Marshall",32));
+        names.add(new Person("Robin",30));
+        names.add(new Person("Tracy",25));
+        names.add(new Person("Victoria",32));
+        return names;
+    }
+}
 
-Also, we can use the comparator static method comparing which takes Function interface lambada, in which we need to
-pass on which field we need to sort.
-```text
- persons.stream().sorted(Comparator.comparing(Person::getAge)).forEach(System.out::println);
+class Person {
+    private String name;
+    private Integer age;
+
+    public Person(String name, Integer age) {
+        this.name = name;
+        this.age = age;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public Integer getAge() {
+        return age;
+    }
+
+    public void setAge(Integer age) {
+        this.age = age;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Person person = (Person) o;
+        return getName().equals(person.getName()) && getAge().equals(person.getAge());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(getName(), getAge());
+    }
+}
 ```
+Above class we are going to use further for this section feature explanation.
 
-Sorting on multiple fields:
-```text
-      persons.
-                stream().
-                sorted(Comparator.
-                        comparing(Person::getAge).
-                        thenComparing(Person::getName))
+Let's get started with few traditional method to sort the List of persons on the basis of age in increasing order,
+in decreasing order and if age are same then sort on name.
+```java
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+
+public class DeclarativeProgrammingMethodSortByAge {
+
+    public static void main(String[] args) {
+        List<Person> persons = PersonsListBuilder.getPersonsList();
+        //Print list of persons
+        persons.forEach(System.out::println);
+        //Sort by increasing age
+        System.out.println("Sort by Age Increasing Order");
+        Collections.sort(persons, new Comparator<Person>() {
+            @Override
+            public int compare(Person o1, Person o2) {
+                return Integer.compare(o1.getAge(),o2.getAge());
+            }
+        });
+        persons.forEach(System.out::println);
+        //Sort by decreasing age
+        System.out.println("Sort by Age Decreasing Order");
+        Collections.sort(persons, new Comparator<Person>() {
+            @Override
+            public int compare(Person o1, Person o2) {
+                return Integer.compare(o2.getAge(),o1.getAge());
+            }
+        });
+        persons.forEach(System.out::println);
+        //Sort by age if age are equal then sort by name
+        System.out.println("Sort by Age Decreasing Order");
+        Collections.sort(persons, new Comparator<Person>() {
+            @Override
+            public int compare(Person o1, Person o2) {
+                if(o1.getAge() == o2.getAge())
+                    return o1.getName().compareTo(o2.getName());
+                return Integer.compare(o1.getAge(),o2.getAge());
+            }
+        });
+        persons.forEach(System.out::println);
+    }
+}
+```
+In above class we are sorting using method Collections.sort(list, comparator). We can highlight two points in above 
+program which are going to improve the using functional programming style. 
+1. Original persons list are modifying when we are calling sort method.
+2. We have to write a lot of code, or I can say a lot of ceremony to just sort the list forward and backward. Also
+can be optimized for age then name sort.
+
+Let's write same program with Functional Programming Style.
+```java
+import java.util.Comparator;
+import java.util.List;
+
+public class FunctionalProgrammingMethodSortByAge {
+    public static void main(String[] args) {
+        List<Person> persons = PersonsListBuilder.getPersonsList();
+        //Print list of persons
+        persons.forEach(System.out::println);
+        //Sort by increasing age
+        System.out.println("Sort by Age Increasing Order");
+        Comparator<Person> ageInIncreasingOrder = (p1, p2) -> Integer.compare(p1.getAge(), p2.getAge());
+        persons.stream().sorted(ageInIncreasingOrder).forEach(System.out::println);
+        System.out.println("Or Using ComparingInt");
+        persons.stream().sorted(Comparator.comparingInt(Person::getAge)).forEach(System.out::println);
+        //Sort by decreasing age
+        System.out.println("Sort by Age Decreasing Order");
+        persons.stream().sorted(ageInIncreasingOrder.reversed()).forEach(System.out::println);
+        //Sort by age if age are equal then sort by name
+        System.out.println("Sort by Age Decreasing Order");
+        persons.stream()
+                .sorted(ageInIncreasingOrder.thenComparing(Person::getName))
                 .forEach(System.out::println);
+    }
+}
 ```
+In above method we can see both the advantage.
+1. Original Collection is not modified.
+2. We have created Comparator using lambada expression; then we used default method of the Comparator class to create
+reverse comparator of forward comparator and then use thenComparing method to add another attribute for which we want
+to compare if age of two persons are same. We have Also used Comparator.comparingInt default method of Comparator class
+which takes method reference as argument and return comparator for comparing the integers by calling those methods.
 
-### Min and Max operation
-Let's take our last example, and we want to find the eldest person in our list. Then we can use again comparing method
-of the Comparator interface and pass the function to max method. If there are two persons of same age in our list it
-will return the first person it finds in the list who ie eldest. It returns optional because if the list empty it
-will return the Optional empty or we can use optional to return default value or throw an exception.
+In the last section we have seen option available as part of stream sorting. Let's go through one of important Java 
+streams property which is laziness. Let's understand more about that below:
+1. Streams are lazy by default in nature i.e. if we define any stream and didn't perform the any terminal operation then
+stream operations are not evaluated.
+2. As soon as streams are able to satisfy the terminal operation result, it will stop evaluating further data on stream.
+For example: As soon as findFirst() function find first matching data element; streams stop evaluating operation or in
+other words post finding first element it stops processing other elements in list.
+
+Let's see the example for 1st and 2nd point below:
+```java
+public class StreamLaziness {
+    public static void main(String[] args) {
+        List<Person> persons = PersonsListBuilder.getPersonsList();
+        System.out.println("List Size is "+persons.size());
+        persons.stream()
+                .filter(person -> {
+                    System.out.println("Filtering age 30, Current Person age is "+person.getAge());
+                    return person.getAge() == 30;
+                });
+        persons.stream().sorted(Comparator.comparing(Person::getName))
+                .filter(person -> {
+                    System.out.println("Filtering age 28, Current Person age is "+person.getAge()
+                            +" and Name is "+person.getName());
+                    return person.getAge() == 28;
+                }).findFirst().ifPresent(System.out::println);
+    }
+}
+```
+If we execute the above code then we will not see any output line with "Filtering age 30", because since stream does
+not contain any terminal operation; so, it didn't get evaluated.
+
+On second stream we see 3 lines of "Filtering age 28" after which it gets the first result, and it terminates further 
+execution of the stream and perform the operation on element get from findFirst() method.
+
+Now how we identify the terminal operation of stream and intermediate operation of stream. The thumb rule for this is 
+that if a function is returning Stream, or it's subtype then it is intermediate operation. If it is returning something 
+else then it is terminal operation.
+
+#### Built-in Functional interfaces provided by JDK
+1. Consumer\<U> : Take 1 parameter and returns nothing; has accept method which performs the operation.
+  foreach method takes consumer. 
+2. Supplier\<U>  : Take 0 parameter and return 1 parameter; has get method which returns the value.
+  orElse method takes Supplier. 
+3. Function\<U,R> : Takes 1 parameter and return 1 parameter; has apply method which apply the opertaion and
+  return the result. map method takes Function. 
+4. Predicate\<T> : Takes 1 parameter and return boolean result; has test method to perform the operation.
+  filter method takes Predicate. 
+5. BiFunction\<T, U, R> : Takes 2 parameters and return 1 parameter; has apply method which performs the operation
+  and return the result. reduce method takes BiFunction. 
+6. BiConsumer\<T, U> : Takes 2 parameters and returns nothing; has accept method which perform the operation.
+
+#### Few useful methods of Built-in Functional Interfaces
+1. negate : This is default method in Predicate class. This is used where we want to perform reverse operation of a
+  particular predicate. The most preferred way to do this provides ! against the predicate in lambada function. Then
+  We can prefer this negate method. Example for same is below:
+```java
+public class UsefulFunctionalInterfaceMethods {
+
+    public static void main(String[] args) {
+        Predicate<Integer> divisibleByTwo = number -> number%2==0;
+        System.out.println(divisibleByTwo.test(5));
+        System.out.println(divisibleByTwo.negate().test(5));
+    }
+}
+```
+2. Composing Predicates: Composing predicates means combining the predicates with AND,OR or NOT operations. Just consider
+   you have two predicates, and you want to perform the filtering based on the both of the condition. So, combining 
+   two predicate and perform filtering on them, we use and(&&), or(||) and negate(!) function. Example for the same
+   below:
+```java
+public class UsefulFunctionalInterfaceMethods {
+
+    public static void main(String[] args) {
+        Predicate<Integer> divisibleByTwo = number -> number%2==0;
+        Predicate<Integer> divisibleByFive = number -> number%5==0;
+        System.out.println(divisibleByFive.or(divisibleByTwo).test(4));
+        System.out.println(divisibleByFive.or(divisibleByTwo).test(7));
+        System.out.println(divisibleByFive.and(divisibleByTwo).test(10));
+        System.out.println(divisibleByFive.and(divisibleByTwo).test(8));
+    }
+}
+```
 
 
 ## Reduce operation on list
@@ -710,25 +999,10 @@ We can transform the resulting field as below:
         System.out.println(charEldestAge);
 ```
 
-## Streams Laziness
-Streams are lazy be default; i.e. whenever we perform the operation and if we just perform the intermediate operation
-without any terminal operation they are not going to call. While when we call the terminal operation, it will compute
-the operation depending on your terminal operation. Let's say if you write findFirst() as terminal operation,
-then the stream will process till it find the first item, as it find the first item which satisfies all condition
-it will process through steps which need to qualify. In example
-[TestStreamLaziness](src/main/java/java8/example/stream/lazy/TestStreamLaziness.java) we can see that we
-initialized the stream but no intermediate operation is called until we called the findFirst(). Also, we can
-see that as the findfirst() get its result on 4 rest of the elements are not processed which is also
-show efficiency of stream.
 
-Now how we identify the terminal operation of stream of and intermediate operation of stream. The thumb rule for this
-I can say is that if a function is returning Stream, or it's subtype then it is intermediate operation. If it is
-returning something else then it is terminal operation.
 
 ## Java 8 lambada or stream functions
-* negate : This is default method in Predicate class. This is used where we want to perform reverse operation of a
-  particular predicate. The most preferred way to do this provides ! against the predicate in lambada function. Then
-  We can prefer this negate method.
+
 
 * compute : This is default method of Map class. We use this method to perform some operation on a map for a particular
   key. For Example:
@@ -807,17 +1081,7 @@ IntStream.range(0,Math.min(list1.size(),list.size())
          .forEach(element -> System.out.println(element[0]+","+element[1]));
 ``` 
 
-* Composing Predicates: Composing predicates means combining the predicates with AND,OR or NOT operations. Just consider
-  you have two predicates and you want to perform the filtering based on the both of the condition; and you are passing
-  the predicate to a different function. So to pass two predicates as one predicate to function you need to combine
-  in some logical group. For which Predicate interface provide default methods to combine which is and,or and negate
-  method.
-```text
-Predicate<Integer> isEven = e-> e%2==0;
-Predicate<Integer> isGT100 = e-> e>100;
-passToFunction(isEven.and(isGT100));
-```
-So in above example we can see we compose two aggreate in one and passing it to the function.
+
 
 * Composing Functions: Similar like predicates the Function interface provides the default method to compose the function
   which is andThen and compose method.
@@ -840,17 +1104,7 @@ To combine the functions we need to take care of output of one function should b
 * Use lambda function as glue code; Keep them short and crispy.
 * Avoid lambda function bigger than 2 lines.
 * Use built-in interfaces for 0,1 or 2 parameters; as compare to create your owns:
-    * Consumer\<U> : Take 1 parameter and returns nothing; has accept method which performs the operation.
-      foreach method takes consumer.
-    * Supplier\<U>  : Take 0 parameter and return 1 parameter; has get method which returns the value.
-      orElse method takes Supplier.
-    * Function\<U,R> : Takes 1 parameter and return 1 parameter; has apply method which apply the opertaion and
-      return the result. map method takes Function.
-    * Predicate\<T> : Takes 1 parameter and return boolean result; has test method to perform the operation.
-      filter method takes Predicate.
-    * BiFunction\<T, U, R> : Takes 2 parameters and return 1 parameter; has apply method which performs the operation
-      and return the result. reduce method takes BiFunction.
-    * BiConsumer<T, U> : Takes 2 parameters and returns nothing; has accept method which perform the operation.
+  
 * If you want more than 3 parameters or more as input to lambda you can pass the Object to built-in interfaces lambda;
   or you can create your own interfaces.
 * Try to give proper names to lambda variable which will help in readable code.
