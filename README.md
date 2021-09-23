@@ -892,30 +892,182 @@ public class UsefulFunctionalInterfaceMethods {
 }
 ```
 
+3. Composing Functions: Similar like predicates the Function interface provides the default method to compose the function
+  which is andThen and compose method.
+```java
+import java.util.function.Function;
+import java.util.function.Predicate;
 
-## Reduce operation on list
-Let's take an example [ListExample](src/main/java/java8/example/reduce/ListExample.java). Let's consider we have
-a stream of values on which we perform some operation and then want to collect values in Collection, then we will use
-different reduce methods for collecting in different collection types.
+public class UsefulFunctionalInterfaceMethods {
 
-If we want to collect the streams in List or any other collection, First thing never ever do like below:
-```text
-        List<Person> personsSortedByAge = new ArrayList<>();
-         persons
-                .stream()
-                .sorted(Comparator.comparing(Person::getAge))
-                .forEach(person -> personsSortedByAge.add(person));
+    public static void main(String[] args) {
+        Function<Integer,Integer> incrementByOne = e -> e+1;
+        Function<Integer,Integer> doubleTheNumber =e -> e*2;
+        System.out.println(incrementByOne.andThen(doubleTheNumber).apply(2)); //6
+        System.out.println(incrementByOne.compose(doubleTheNumber).apply(2)); //5
+    }
+}
+```
+Let's see the difference between andThen and compose function. In andThen method argument function execute after the 
+instance function on which andThen method is called. In our example given number is first increment by 1 and then get 
+doubled; That's why we are getting output as 6. The number 2 is first increment by 1 which becomes 3, and then it 
+is doubled which made our output 6.
+
+While in compose method argument function execute first after that instance function on which compose method is called
+executes. In our example given number is first doubled and then increment by 1 that's why we are getting output 5. The
+number 2 is first doubled and becomes 4, and then it increments by 1 which made our output 5.
+
+#### Few Useful Stream methods
+1. map: map method convert stream of one type to another like in below example we are converting Person instances stream
+to String stream.
+```java
+import java.util.List;
+
+public class UsefulStreamMethods {
+
+    public static void main(String[] args) {
+        List<Person> persons = PersonsListBuilder.getPersonsList();
+        persons.stream().map(Person::getName).forEach(System.out::println);
+    }
+}
 ```
 
-Use Collectors class from stream package and then use method to collect the data after transformation like below:
-```text
-         persons
-                .stream()
-                .sorted(Comparator.comparing(Person::getAge))
-                .collect(Collectors.toList());
+2. mapToInt: mapToInt method converts our stream to primitive type stream. In Java, we treat primitive datatype streams
+differently for which we have classes IntStream,LongStream and DoubleStream. These classes provide some additional 
+method like min,max and SummaryStatistics like mathematical functions on these streams. Let's see below example:
+```java
+import java.util.IntSummaryStatistics;
+import java.util.List;
+import java.util.OptionalInt;
+import java.util.stream.IntStream;
+
+public class UsefulStreamMethods {
+
+    public static void main(String[] args) {
+        List<Person> persons = PersonsListBuilder.getPersonsList();
+        IntStream personsAgeStream = persons.stream().mapToInt(Person::getAge);
+        OptionalInt minimumAge = personsAgeStream.min();
+        minimumAge.ifPresent(System.out::println); //20
+        personsAgeStream = persons.stream().mapToInt(Person::getAge);
+        OptionalInt maximumAge = personsAgeStream.max();
+        maximumAge.ifPresent(System.out::println); //38
+        personsAgeStream = persons.stream().mapToInt(Person::getAge);
+        IntSummaryStatistics summaryStatistics = personsAgeStream.summaryStatistics();
+        System.out.println(summaryStatistics); //IntSummaryStatistics{count=13, sum=371, min=20, average=28.538462, max=38}
+    }
+}
+```
+On second line we are getting the IntStream which is primitive stream.
+ * min: On third line of program we called min function available as part of IntStream; Which returns min value as
+   OptionalInt(primitive int Optional) and we can use Optional Class method on it to get value or perform operation over
+   the output. This returns Optional because if stream is empty then it returns Option.empty().
+ * max: On sixth lime of program we called max function available as part of IntStream; Which returns max value as
+   OptionalInt(primitive int Optional) and we can use Optional Class method on it to get value or perform operation over
+   the output. This returns Optional because if stream is empty then it returns Option.empty().
+ * SummaryStatistics: On ninth line we are calling summaryStatistics method which returns IntSummaryStatistics,
+   DoubleSummaryStatistics and LongSummaryStatistics depending on stream. It gives us information about elements
+   calculated basic operation; like count,sum,min,max and average.
+
+**Notice on Line 2 we initialize the stream variable and then on Line 5 we re-initializes with same value. Now questions
+comes why we didn't use same variable again without re-initializing. To answer to that question, Let's highlight one more
+characteristics of stream that Stream is immutable and also once stream is operated it is closed for further operation to 
+be performed i.e. we have performed one terminal operation on a stream then another terminal operation can not be 
+performed on same stream. If we do that; we will get Exception "java.lang.IllegalStateException: stream has already 
+been operated upon or closed"**
+
+3. filter: filter function takes a predicate and test each element against this predicate; when predicate returns true
+then element will be further processed if predicate returns false then the element is dropped from the stream for 
+further processing.
+```java
+public class UsefulStreamMethods {
+
+    public static void main(String[] args) {
+        List<Person> persons = PersonsListBuilder.getPersonsList();
+        System.out.println(persons.stream().filter(e -> e.getAge() > 30).count()); //3
+    }
+}
+```
+In above example we are filtering persons whose age is greater than 30, and we get count of it. So this function will 
+drop all the elements whose age is less than or equal to 30. 
+
+4. allMatch/anyMatch: These function also takes predicate as argument and returns boolean i.e. it is a terminal function.
+allMatch returns true if all elements of stream is qualify the predicate condition otherwise it returns false. anyMatch 
+returns true if any of element in stream qualify the predicate condition.
+```java
+public class UsefulStreamMethods {
+
+    public static void main(String[] args) {
+        List<Person> persons = PersonsListBuilder.getPersonsList();
+        System.out.println(persons.stream().allMatch(e->e.getAge()<50)); // true
+        System.out.println(persons.stream().anyMatch(e->e.getAge()>50)); // false
+    }
+}
 ```
 
-Similar List we can collect result in set by Collectors.toSet().
+5. flatMap: flatMap produces stream out of element. Let's take an example to understand this.
+```java
+public class UsefulStreamMethods {
+
+    public static void main(String[] args) {
+        Map<String,List<String>> synonyms = new HashMap<>();
+        List<String> angerSynonymList = new ArrayList<>();
+        angerSynonymList.add("Enrage");
+        angerSynonymList.add("Infuriate");
+        angerSynonymList.add("Nettle");
+        synonyms.put("Anger",angerSynonymList);
+        List<String> answerSynonymList = new ArrayList<>();
+        answerSynonymList.add("Reply");
+        answerSynonymList.add("Respond");
+        answerSynonymList.add("Retort");
+        synonyms.put("Answer",answerSynonymList);
+
+        synonyms.values().stream().forEach(System.out::println); // [Enrage, Infuriate, Nettle] [Reply, Respond, Retort]
+        synonyms.values().stream().flatMap(e-> e.stream()).forEach(System.out::println); // Enrage Infuriate Nettle Reply Respond Retort
+    }
+}
+```
+We have created a list of synonyms and stored them as map. Let's say I want to print List of all synonym word. When
+I just converted the values in stream I get the list which I need to process further in foreach to get each string. 
+Here flatMap helps me to convert list of String to Stream of String.
+
+#### Collecting Stream data post-processing
+Till now, we have performed operation on stream and print out or store in a variable. What If we want to process 
+elements and want to store in any collection like List,Set or Map. Streams provide collect method to store elements
+on a collection and store it.
+
+Let's see different methods and techniques to store the data in different form.
+
+1. Let's take example of List we have sorted by age of person in previous section and print it. Let's consider after
+sorting we need to store this new List, so we can use it further. For collecting into the List we use function collect
+which takes and Collector; We get most of common Collector in a utility class Collectors. Let's see how we can store
+sorted list below:
+```java
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Collectors;
+
+public class DataCollectionPostProcessingStream {
+    public static void main(String[] args) {
+        List<Person> persons = PersonsListBuilder.getPersonsList();
+        List<Person> sortedByAgePersonsList = persons.stream()
+                .sorted(Comparator.comparingInt(Person::getAge)).collect(Collectors.toList());
+        sortedByAgePersonsList.forEach(System.out::println);
+    }
+}
+```
+
+2. Just consider we want Set in that case we can use Collectors.toSet() in collect method. 
+```java
+public class DataCollectionPostProcessingStream {
+    public static void main(String[] args) {
+        List<Person> persons = PersonsListBuilder.getPersonsList();
+        Set<Person> sortedByAgePersonsSet = persons.stream()
+                .filter(e-> e.getAge()>25).collect(Collectors.toSet());
+        System.out.println(sortedByAgePersonsSet.size());
+    }
+}
+```
+
 
 Let's now understand how to store the collection in the Map.
 ```text

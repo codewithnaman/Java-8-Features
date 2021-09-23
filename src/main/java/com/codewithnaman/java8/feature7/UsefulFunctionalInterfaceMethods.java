@@ -1,5 +1,6 @@
 package com.codewithnaman.java8.feature7;
 
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 public class UsefulFunctionalInterfaceMethods {
@@ -13,5 +14,10 @@ public class UsefulFunctionalInterfaceMethods {
         System.out.println(divisibleByFive.or(divisibleByTwo).test(7));
         System.out.println(divisibleByFive.and(divisibleByTwo).test(10));
         System.out.println(divisibleByFive.and(divisibleByTwo).test(8));
+
+        Function<Integer,Integer> incrementByOne = e -> e+1;
+        Function<Integer,Integer> doubleTheNumber =e -> e*2;
+        System.out.println(incrementByOne.andThen(doubleTheNumber).apply(2));
+        System.out.println(incrementByOne.compose(doubleTheNumber).apply(2));
     }
 }
