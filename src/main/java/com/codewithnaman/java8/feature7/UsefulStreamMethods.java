@@ -2,6 +2,7 @@ package com.codewithnaman.java8.feature7;
 
 import java.util.*;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 public class UsefulStreamMethods {
 
@@ -36,5 +37,19 @@ public class UsefulStreamMethods {
 
         synonyms.values().stream().forEach(System.out::println);
         synonyms.values().stream().flatMap(e-> e.stream()).forEach(System.out::println);
+        System.out.println("======Concat======");
+        List<String> stream1 = new ArrayList<>();
+        stream1.add("Apple");
+        stream1.add("Mango");
+        List<String> stream2 = new ArrayList<>();
+        stream2.add("BMW");
+        stream2.add("Mercedes");
+        Stream.concat(stream1.stream(),stream2.stream()).forEach(System.out::println);
+        System.out.println("=====Zip=====");
+        List<Integer> list1 = Arrays.asList(1,2,3,4,5);
+        List<String> list2 = Arrays.asList("a","b","c","d","e");
+        IntStream.range(0,Math.min(list1.size(),list2.size()))
+                .mapToObj(i-> new String[] {list1.get(i).toString(),list2.get(i)})
+                .forEach(element -> System.out.println(element[0]+","+element[1]));
     }
 }

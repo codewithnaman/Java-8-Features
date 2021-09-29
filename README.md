@@ -1,4 +1,15 @@
 # Java 8 Features and Examples
+## Table of Contents
+* [Feature 0 - Functional Interfaces](#feature-0---functional-interfaces)
+* [Feature 1 - Lambada expression](#feature-1---lambada-expression)
+* [Feature 2 - Writing your own functional interface](#feature-2---writing-your-own-functional-interface)
+* [Feature 3 - Method References](#feature-3---method-references)
+* [Feature 4 - Default method in Interfaces](#feature-4---default-method-in-interfaces)
+* [Feature 5 - Final and effectively final variable](#feature-5---final-and-effectively-final-variable)
+* [Feature 6 - Optional](#feature-6---optional)
+* [Feature 7 - Streams](#feature-7---streams)
+* [Java 8 Lambda Expression Best Practices](#java-8-lambda-expression-best-practices)
+
 Java 8 introduces declarative style or functional style of programming over the imperative programming. Let's first
 understand what is declarative programming and imperative programming.
 
@@ -1030,6 +1041,46 @@ We have created a list of synonyms and stored them as map. Let's say I want to p
 I just converted the values in stream I get the list which I need to process further in foreach to get each string. 
 Here flatMap helps me to convert list of String to Stream of String.
 
+6. concat : This is used to concat two different streams to one.
+```java
+public class UsefulStreamMethods {
+
+    public static void main(String[] args) {
+        System.out.println("======Concat======");
+        List<String> stream1 = new ArrayList<>();
+        stream1.add("Apple");
+        stream1.add("Mango");
+        List<String> stream2 = new ArrayList<>();
+        stream2.add("BMW");
+        stream2.add("Mercedes");
+        Stream.concat(stream1.stream(),stream2.stream()).forEach(System.out::println);
+    }
+}
+```
+
+7. zip : zip will put the elements alternatively from different streams. For example :
+
+Stream 1 : 1  2 3 4 5
+
+Stream 2 : a b c d e
+
+Then zip will return like (1,a),(2,b).(3,c),(4,d),(5,e). This is important part for functional programming but zip
+operation is not directly available in the java while it is in Scala. So we can perform same operation in Java
+like below:
+```java
+public class UsefulStreamMethods {
+
+    public static void main(String[] args) {
+        System.out.println("=====Zip=====");
+        List<Integer> list1 = Arrays.asList(1,2,3,4,5);
+        List<String> list2 = Arrays.asList("a","b","c","d","e");
+        IntStream.range(0,Math.min(list1.size(),list2.size()))
+                .mapToObj(i-> new String[] {list1.get(i).toString(),list2.get(i)})
+                .forEach(element -> System.out.println(element[0]+","+element[1]));
+    }
+}
+``` 
+
 #### Collecting Stream data post-processing
 Till now, we have performed operation on stream and print out or store in a variable. What If we want to process 
 elements and want to store in any collection like List,Set or Map. Streams provide collect method to store elements
@@ -1068,198 +1119,239 @@ public class DataCollectionPostProcessingStream {
 }
 ```
 
-
-Let's now understand how to store the collection in the Map.
-```text
-  Map<Integer,List<Person>> ageGroupOfPerson =
-                persons
-                .stream()
-                .collect(Collectors.groupingBy(Person::getAge));
+3. Now let's collect data in map. For this example consider we want to make map of all the persons with same age. In 
+this case Integer will be our key which represents age and List<Person> will be our value. Let's see in practice.
+```java
+public class DataCollectionPostProcessingStream {
+    public static void main(String[] args) {
+        List<Person> persons = PersonsListBuilder.getPersonsList();
+        Map<Integer,List<Person>> personsByTheirAge = persons.stream().collect(Collectors.groupingBy(Person::getAge));
+        //{32=[Person{name='Marshall', age=32}, Person{name='Victoria', age=32}], 20=[Person{name='Annabelle', age=20}],
+        // 38=[Person{name='Barney', age=38}], 25=[Person{name='Monica', age=25}, Person{name='Joey', age=25}, Person{name='Tracy', age=25}],
+        // 28=[Person{name='Ted', age=28}, Person{name='Chandler', age=28}, Person{name='Lily', age=28}], 
+        // 30=[Person{name='Rachel', age=30}, Person{name='Ross', age=30}, Person{name='Robin', age=30}]}
+        System.out.println(personsByTheirAge);
+    }
+}
 ```
-For collecting stream as map, we need to group by the objects on some key basis. As we can see collect method take
-Collectors.groupingBy which further takes a classifier as input which is key for the map and in above case the value is
-List of the object at terminal of stream.
+While collecting stream as map, we need to group by the objects on some key basis, here the key is age of person. In 
+above code snippet collect method take Collectors.groupingBy which further takes a classifier as input which is key for 
+the map and in above case the value is List of the object at terminal of stream.
 
-```text
-        Map<Character,List<Person>> firstCharacterGroupOfPerson =
-                persons
-                        .stream()
-                        .collect(Collectors.groupingBy(person -> person.getName().charAt(0)));
+Let's say we want to create Map by their first character in map.
+```java
+public class DataCollectionPostProcessingStream {
+    public static void main(String[] args) {
+        List<Person> persons = PersonsListBuilder.getPersonsList();
+        Map<Character,List<Person>> personsByTheirFirstLetterOfName = persons.stream()
+                .collect(Collectors.groupingBy(e->e.getName().charAt(0)));
+        //{A=[Person{name='Annabelle', age=20}], B=[Person{name='Barney', age=38}], 
+        // R=[Person{name='Rachel', age=30}, Person{name='Ross', age=30}, Person{name='Robin', age=30}], 
+        // C=[Person{name='Chandler', age=28}], T=[Person{name='Ted', age=28}, Person{name='Tracy', age=25}], 
+        // V=[Person{name='Victoria', age=32}], J=[Person{name='Joey', age=25}], L=[Person{name='Lily', age=28}], 
+        // M=[Person{name='Monica', age=25}, Person{name='Marshall', age=32}]}
+        System.out.println(personsByTheirFirstLetterOfName);
+    }
+}
 ```
-
-In above example we defined the custom key which is person first character. The classifier is a function takes
+In above code snippet we defined custom key which is person first character. The classifier is a function takes
 a function which takes an input and return an output.
 
-By classifier we have seen how to decide the key, Let's see how we can specify type of value map can contain.
-```text
-Map<Character, List<Integer>> charAge =
+Now Let's consider we do need complete object as list of value; we just want to list of age of person; Then we will 
+a new function as part of collect which is mapping function, that will change person object to Integer and collect
+in a List. Let's see that in practice.
+```java
+public class DataCollectionPostProcessingStream {
+    public static void main(String[] args) {
+        List<Person> persons = PersonsListBuilder.getPersonsList();
+        Map<Character, List<Integer>> charAge =
                 persons
                         .stream()
-                        .collect(groupingBy(person -> person.getName().charAt(0),
-                                mapping(person-> person.getAge(),toList())));
+                        .collect(Collectors.groupingBy(person -> person.getName().charAt(0),
+                                Collectors.mapping(person-> person.getAge(),Collectors.toList())));
+        //{A=[20], B=[38], R=[30, 30, 30], C=[28], T=[28, 25], V=[32], J=[25], L=[28], M=[25, 32]}
+        System.out.println(charAge);
+    }
+}
 ```
-So in above example we can see our key is person's name first character and value is person's age. For get desired
-type of value we use static function of Collectors class which name is mapping. mapping takes a function and return
+In above code snippet our key is person's name first character and value is person's age. For get desired
+type of value we use static mapping function of Collectors class. mapping takes a function and return
 the value which we want to collect, the second argument takes how we want to collect values like in list, set or any
 other collection.
 
-
-We have collected value in another collection, what if we want a single key value pair collection. Let's understand
-this as well.
-```text
-        System.out.println("==========Char eldest collection===========");
-        Function<Person, Character> firstCharacterOfPersonName = person -> person.getName().charAt(0);
-        Comparator<Person> byAge = Comparator.comparing(Person::getAge);
+As of now we have a collection on value part of map, but what if we want just value instead of collection. Let's see
+that in practice.
+```java
+public class DataCollectionPostProcessingStream {
+    public static void main(String[] args) {
+        List<Person> persons = PersonsListBuilder.getPersonsList();
         Map<Character, Optional<Person>> charEldest =
                 persons
                         .stream()
-                        .collect(groupingBy(firstCharacterOfPersonName, maxBy(byAge)));
+                        .collect(Collectors.groupingBy(person -> person.getName().charAt(0),
+                                Collectors.maxBy(Comparator.comparingInt(Person::getAge))));
+        //{A=Optional[Person{name='Annabelle', age=20}], B=Optional[Person{name='Barney', age=38}], 
+        // R=Optional[Person{name='Rachel', age=30}], C=Optional[Person{name='Chandler', age=28}], 
+        // T=Optional[Person{name='Ted', age=28}], V=Optional[Person{name='Victoria', age=32}], 
+        // J=Optional[Person{name='Joey', age=25}], L=Optional[Person{name='Lily', age=28}], 
+        // M=Optional[Person{name='Marshall', age=32}]}
         System.out.println(charEldest);
+    }
+}
 ```
-
-In above example as we can see we are grouping by the first character of person name, then we wanna eldest in the group
+In above code snippet we are grouping by the first character of person name, then we wanna eldest in the group
 so what we did we are performing maxBy operation which takes comparator on which the comparison will be performed
 and max value will be return. It might be the collection can empty, so it is returning the Optional of the person.
 
-Now let's understand more complex operation in grouping by like reducing on the condition; like if the name length
-of two persons is equal then eldest person will taken otherwise whose name length is greater than he taken.
-```text
-        System.out.println("==========Name length and then eldest collection===========");
-        Function<Person, Integer> nameLength = person -> person.getName().length();
-        BinaryOperator<Person> criteria = (person1, person2) -> {
-            if (person1.getName().length() == person2.getName().length()) {
-                return person1.getAge() > person2.getAge() ? person1 : person2;
-            } else {
-                return person1.getName().length() > person2.getName().length() ? person1 : person2;
-            }
-        };
-        Map<Integer, Optional<Person>> nameLengthThenEldest =
-                persons
-                        .stream()
-                        .collect(groupingBy(nameLength, reducing(criteria)));
-        System.out.println(nameLengthThenEldest);
+Let's understand a little more complex operation we have for groupingBy function. For this example consider we want 
+Person with Maximum age and if the age of person is same then name length will take in consideration and whose name 
+length is large that person is considered.
+```java
+public class DataCollectionPostProcessingStream {
+    public static void main(String[] args) {
+        List<Person> persons = PersonsListBuilder.getPersonsList();
+        Map<Integer,Optional<Person>> personByAgeWithHighestNameLength = persons
+                .stream()
+                .collect(Collectors.groupingBy(
+                        Person::getAge,Collectors.reducing((p1,p2)-> {
+                            if(p1.getAge()==p2.getAge())
+                                return p1.getName().length()>p2.getName().length() ? p1 : p2;
+                            else
+                                return p1.getAge()> p2.getAge() ? p1: p2;
+                        })
+                ));
+        //{32=Optional[Person{name='Victoria', age=32}], 20=Optional[Person{name='Annabelle', age=20}], 
+        // 38=Optional[Person{name='Barney', age=38}], 25=Optional[Person{name='Monica', age=25}], 
+        // 28=Optional[Person{name='Chandler', age=28}], 30=Optional[Person{name='Rachel', age=30}]}
+        System.out.println(personByAgeWithHighestNameLength);
+    }
+}
+```
+Collectors.reducing takes BinaryOperator which performs some operation and return the same type.
+
+#### New Map Interface functions
+With Java 8, we get few new functions that make our life easier. Let's see each function one by one.
+
+1. compute : This is default method of Map class. We use this method to perform some operation on a map for a particular
+  key. If key is not present then this method can throw a NullPointException.
+```java
+public class NewMapFunctions {
+
+    public static void main(String[] args) {
+        Map<String,Integer> mapOfFruitsCount = new HashMap<>();
+        mapOfFruitsCount.put("Apple",2);
+        mapOfFruitsCount.put("Mango",1);
+        mapOfFruitsCount.put("Guava",5);
+        //{Guava=5, Apple=2, Mango=1}
+        System.out.println(mapOfFruitsCount);
+        mapOfFruitsCount.compute("Apple",(key,value)->value+1);
+        // mapOfFruitsCount.compute("Banana",(key,value)->value+1); -- will throw NPE
+        //{Guava=5, Apple=3, Mango=1}
+        System.out.println(mapOfFruitsCount);
+    }
+}
 ```
 
-We can transform the resulting field as below:
-```text
-        System.out.println("==========Char with eldest person age collection===========");
-        Map<Character, Optional<Integer>> charEldestAge =
-                persons
-                        .stream()
-                        .collect(groupingBy(firstCharacterOfPersonName,
-                                mapping(Person::getAge, maxBy(Integer::compare))));
-        System.out.println(charEldestAge);
+2. merge : In above method we can see that when we perform the compute function on "Banana" then it throws NullPointer
+Exception; We can resolve this by using below:
+```java
+public class NewMapFunctions {
+
+    public static void main(String[] args) {
+        Map<String,Integer> mapOfFruitsCount = new HashMap<>();
+        mapOfFruitsCount.put("Apple",2);
+        mapOfFruitsCount.put("Mango",1);
+        mapOfFruitsCount.put("Guava",5);
+        //{Guava=5, Apple=2, Mango=1}
+        System.out.println(mapOfFruitsCount);
+        mapOfFruitsCount.compute("Apple",(key,value)->value+1);
+        // mapOfFruitsCount.compute("Banana",(key,value)->value+1); -- will throw NPE
+        //{Guava=5, Apple=3, Mango=1}
+        System.out.println(mapOfFruitsCount);
+        mapOfFruitsCount.compute("Banana",(key,value)-> Objects.nonNull(value) ? value+1 : 1);
+        System.out.println(mapOfFruitsCount);
+    }
+}
 ```
+But, the above code is not much intuitive. We will use the merge function to make it better. Let's understand how merge
+method makes it better.
 
+If we see compute method signature it takes a key and BiFunction which has two arguments key and value. merge method 
+takes 3 argument in which first is the key to perform the operation, second is default value if the key is not present
+then this is the value which will be used and third is BiFunction same like compute to perform the operation if key is
+present then it takes current value and perform the operation. But point to note here is that BiFunction takes the 
+argument value and default value; we don't get key.
+```java
+public class NewMapFunctions {
 
-
-## Java 8 lambada or stream functions
-
-
-* compute : This is default method of Map class. We use this method to perform some operation on a map for a particular
-  key. For Example:
-```text
-map.compute("apple", (key, value) -> value + 1);
-```
-The above example is one of the common use case. But if your provided key is not present then this method throws NPE.
-Let's resolve this problem by using one other method of the Map Class.
-
-* merge : If we use compute method and want to avoid NPE, then we can do something like below with compute function.
-```text
-map.compute("apple", (key, value) -> Objects.nonNull(value) ? value + 1 : 1);
-```
-But, the above code is not much intuitive. We will use the merge function to it better. Let's understand first
-how compute works and how merge is going to work for us.
-
-If we see compute method signature it takes a key and BiFunction which has two arguments key and value. But the
-merge takes 3 argument; first is key second is default value if key is not present third is the BiFunction which
-tells how you want to use default value and existing value of the key. Let's see this by example:
-
-```text
-map.merge("apple",1,(value,defaultValue) -> value+defaultValue);
+    public static void main(String[] args) {
+        Map<String,Integer> mapOfFruitsCount = new HashMap<>();
+        mapOfFruitsCount.put("Apple",2);
+        mapOfFruitsCount.put("Mango",1);
+        mapOfFruitsCount.put("Guava",5);
+        //{Guava=5, Apple=2, Mango=1}
+        System.out.println(mapOfFruitsCount);
+        mapOfFruitsCount.compute("Apple",(key,value)->value+1);
+        // mapOfFruitsCount.compute("Banana",(key,value)->value+1); -- will throw NPE
+        //{Guava=5, Apple=3, Mango=1}
+        System.out.println(mapOfFruitsCount);
+        mapOfFruitsCount.compute("Banana",(key,value)-> Objects.nonNull(value) ? value+1 : 1);
+        System.out.println(mapOfFruitsCount);
+        mapOfFruitsCount.merge("Mango",2,(value,defaultValue)->value+defaultValue);
+        mapOfFruitsCount.merge("Pomegranate",1,(value,defaultValue)->value+defaultValue);
+        //{Guava=5, Apple=3, Mango=3, Pomegranate=1, Banana=1}
+        System.out.println(mapOfFruitsCount);
+    }
+}
 ```
 
 So, if the key is not present in merge then it will add the key with default value; if the key is present then it will
 increment the value by defaultValue as provided in lambada expression for the BiFunction. Be cautious about this method
 because when BiFunction returns null then merge removes the key.
 
-* computeIfPresent : This is again a default method of the Map class. This is used when we want to perform some operation
-  on the map if and only if the key is present. It also avoids NPE if the key is not present.
-
-* computeIfAbsent : This is again a default method of the Map Class. This is just opposite of the computeIfPresent. If
-  the key is not present then it performs the operation. Let's see example for both:
-```text
-map.computeIfAbsent("apple", key-> 0);
-map.computeIfPresent("apple",(key,value) - > value+1);
-```
-
-* When we are using lambada function we should try to use the [pure function](http://blog.agiledeveloper.com/2015/12/two-rules-for-purity.html).
-
-* summaryStatistics : This is to get the summary statistics on the double stream.
+3. computeIfPresent and computeIfAbsent : These are again default methods of the Map class. This is used when we want 
+to perform some operation on the map if and only if the key is present or if and only if the is absent.
+computeIfPresent It also avoids NPE if the key is not present.
 ```java
-System.out.println(
-    Stream.of(1,2,3,4,5,6).mapToDouble(e->e).summaryStatistics()
-);
+public class NewMapFunctions {
+
+    public static void main(String[] args) {
+        Map<String,Integer> mapOfFruitsCount = new HashMap<>();
+        mapOfFruitsCount.put("Apple",2);
+        mapOfFruitsCount.put("Mango",1);
+        mapOfFruitsCount.put("Guava",5);
+        //{Guava=5, Apple=2, Mango=1}
+        System.out.println(mapOfFruitsCount);
+        mapOfFruitsCount.compute("Apple",(key,value)->value+1);
+        // mapOfFruitsCount.compute("Banana",(key,value)->value+1); -- will throw NPE
+        //{Guava=5, Apple=3, Mango=1}
+        System.out.println(mapOfFruitsCount);
+        mapOfFruitsCount.compute("Banana",(key,value)-> Objects.nonNull(value) ? value+1 : 1);
+        System.out.println(mapOfFruitsCount);
+        mapOfFruitsCount.merge("Mango",2,(value,defaultValue)->value+defaultValue);
+        mapOfFruitsCount.merge("Pomegranate",1,(value,defaultValue)->value+defaultValue);
+        //{Guava=5, Apple=3, Mango=3, Pomegranate=1, Banana=1}
+        System.out.println(mapOfFruitsCount);
+        mapOfFruitsCount.computeIfPresent("Apple",(key,value)->value+2);
+        mapOfFruitsCount.computeIfPresent("Papaya",(key,value)->value+2);
+        //{Guava=5, Apple=5, Mango=3, Pomegranate=1, Banana=1}
+        System.out.println(mapOfFruitsCount);
+        mapOfFruitsCount.computeIfAbsent("Apple",(key)->1);
+        mapOfFruitsCount.computeIfAbsent("Papaya",(key)->1);
+        //{Guava=5, Apple=5, Papaya=1, Mango=3, Pomegranate=1, Banana=1}
+        System.out.println(mapOfFruitsCount);
+    }
+}
 ```
-or
-```java
-System.out.println(
-    Stream.of(1,2,3,4,5,6).collect(Collectors.summarizingDouble(e->e))
-);
-```
 
-Both return the DoubleSummaryStatistics which contains the number of element stream have, sum,avarage and min and max
-value for the stream.
-
-* concat : This is used to concat two different streams to one.
-```java
-Stream.concat(stream1,stream2)
-```
-
-* zip : zip will put the elements alternatively from different streams. For example :
-
-Stream 1 : 1  2 3 4 5
-
-Stream 2 : a b c d e
-
-Then zip will return like (1,a),(2,b).(3,c),(4,d),(5,e). This is important part for functional programming but zip
-operation is not directly available in the java while it is in Scala. So we can perform same operation in Java
-like below:
-```text
-List<Integer> list1 = Arrays.asList(1,2,3,4,5);
-List<String> list2 = Arrays.asList("a","b","c","d","e");
-IntStream.range(0,Math.min(list1.size(),list.size())
-         .mapToObj(i-> new String[] {list1.get(i).toString(),list2.get(i)})
-         .forEach(element -> System.out.println(element[0]+","+element[1]));
-``` 
-
-
-
-* Composing Functions: Similar like predicates the Function interface provides the default method to compose the function
-  which is andThen and compose method.
-```text
-Function<Integer,Integer> inc = e -> e+1;
-Function<Integer,Integer> double = e -> e*2;
-passToFunction(inc.andThen(double));
-passToFunction(inc.compose(double));
-```
-Now what is difference between the both functions; The andThen passed function will be applied after the inc is done
-its work while compose passed function will be applied before the inc is called. So for example we have number 5 and
-we call above code then and then will print 12 i.e. first it incremented 5 with 1 which becomes 6 and then perform
-double, so it became 12. While same in compose the output will be 11; because it will first double the number for which
-it became 10 and then increment by 1, so it will become 11.
-
-To combine the functions we need to take care of output of one function should be input the other function.
-
-## Java 8 Lambda Expression Best Practices
+### Java 8 Lambda Expression Best Practices
 * Prefer method references over lambada expression
 * Use lambda function as glue code; Keep them short and crispy.
 * Avoid lambda function bigger than 2 lines.
-* Use built-in interfaces for 0,1 or 2 parameters; as compare to create your owns:
-  
-* If you want more than 3 parameters or more as input to lambda you can pass the Object to built-in interfaces lambda;
+* Use built-in interfaces for 0,1 or 2 parameters; as compare to create your owns.
+* If you want more than 3 parameters or more in input to lambda you can pass the Object to built-in interfaces' lambda;
   or you can create your own interfaces.
 * Try to give proper names to lambda variable which will help in readable code.
 * Avoid shared mutability in Lambda functions.
-* 
+* When we are using lambada function we should try to use the [pure function](http://blog.agiledeveloper.com/2015/12/two-rules-for-purity.html).
 
